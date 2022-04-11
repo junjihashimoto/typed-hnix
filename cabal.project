@@ -1,5 +1,20 @@
 packages:
     typed-hnix.cabal
-    hnix/hnix.cabal
-    relude/relude.cabal
-    hnix-store/*/*.cabal
+
+source-repository-package
+    type: git
+    location: https://github.com/haskell-nix/hnix
+    tag: 0756b1f9e3091b1298827396f16d9d86999a800d
+    --sha256: 0hhzwrwiwvhqhrvja0fnqa451qa5bd6n23wfap9h0hfgpfxhjzhp
+
+source-repository-package
+    type: git
+    location: https://github.com/kowainik/relude
+    tag: fcb32257a37e34a48f70ddd55424394de4bb025c
+    --sha256: 04p7riaz80700lmc46dw66vz6naq6kjxayq1pdrisr77w57mg26r
+
+source-repository-package
+    type: git
+    location: https://github.com/haskell-nix/hnix-store
+    tag: 4185057ab887f81dc07c420dcea6f32142f21ebb
+    --sha256: 17l2jkmwhi3c9qgikkk6w2n5pz83vzynd9r7ana2kv29z23xz4ky
