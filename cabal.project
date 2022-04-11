@@ -1,2 +1,5 @@
 packages:
     typed-hnix.cabal
+    hnix/hnix.cabal
+    relude/relude.cabal
+    hnix-store/*/*.cabal

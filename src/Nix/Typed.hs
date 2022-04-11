@@ -2,11 +2,17 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleInstances#-}
+{-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Nix.Typed where
 
 import qualified Nix as N
 import Nix (NExpr)
+import Nix.TH (nix)
 import Data.Fix
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -45,7 +51,7 @@ instance NixOrd Int where
 
 instance NixApplicative NixE where
   pure' = toExpr
-  ($<*>) (NixE m1) (NixE m2) = NixE (Fix ((N.NBinary N.NApp) m1 m2))
+  ($<*>) (NixE m1) (NixE m2) = NixE $ m1 N.@@ m2
 
 if' :: NixExpr a => NixE Bool -> NixE a -> NixE a -> NixE a
 if' (NixE ncond) (NixE na) (NixE nb) = NixE (N.mkIf ncond na nb)
@@ -67,6 +73,23 @@ instance NixExpr Bool where
 
 instance NixExpr Text where
   toExpr = NixE . N.mkStr
+
+newtype Path = Path {unPath :: FilePath}
+
+instance IsString Path where
+  fromString = Path
+
+instance NixExpr Path where
+  toExpr = NixE . N.mkPath False . unPath
+
+instance NixExpr (NixE a) where
+  toExpr = NixE . unNixE
+
+instance NixExpr a => NixExpr [a] where
+  toExpr = NixE . N.mkList . map (unNixE . toExpr)
+
+join' :: NixE (NixE a) -> NixE a
+join' = NixE . unNixE
 
 fromBinaryOp
   :: (NixExpr a, NixExpr b)
@@ -119,9 +142,40 @@ instance Num (NixE Float) where
                           zero)
                    ) a
 
+data Derivation
+
+data DerivationParam = DerivationParam
+  { pname :: Text
+  , version :: Text
+  , src :: Path
+  , buildInputs :: [NixE Derivation]
+  , buildPhase :: Maybe Text
+  , installPhase :: Maybe Text
+  , builder :: Maybe Text
+  , shellHook :: Maybe Text
+  }
+
+set :: NixExpr a => Text -> a -> [N.Binding NExpr]
+set key v = [ key N.$= unNixE (toExpr v) ]
+
+opt :: NixExpr a => Text -> Maybe a -> [N.Binding NExpr]
+opt key (Just v) = [ key N.$= unNixE (toExpr v) ]
+opt _ Nothing = []
+
+mkDerivation :: DerivationParam -> NixE Derivation
+mkDerivation param = NixE $ [nix|stdenv.mkDerivation|] N.@@ N.mkNonRecSet
+  (  set "pname" param.pname
+  ++ set "version" param.version
+  ++ set "src" param.src
+  ++ set "buildInputs" param.buildInputs
+  ++ opt "buildPhase" param.buildPhase
+  ++ opt "installPhase" param.installPhase
+  ++ opt "builder" param.builder
+  ++ opt "shellHook" param.shellHook
+  )
+
 dump :: NixE a -> IO ()
 dump e = print . N.prettyNix . unNixE $ e
 
-dumpToText :: NixE a -> String
-dumpToText e = show . N.prettyNix . unNixE $ e
-
+dumpToText :: NixE a -> Text
+dumpToText e = T.pack . show . N.prettyNix . unNixE $ e

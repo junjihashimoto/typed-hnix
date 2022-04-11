@@ -29,8 +29,8 @@ library
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
-    build-depends:    base ^>=4.15.0.0
-                    , hnix
+    build-depends:    base >=4.16.0.0
+                    , hnix >= 0.16.0
                     , prettyprinter
                     , text
                     , template-haskell
@@ -43,7 +43,12 @@ test-suite spec
     type:            exitcode-stdio-1.0
     hs-source-dirs:  test
     main-is:         Spec.hs
+    other-modules:   InlineText
     ghc-options:     -Wall -threaded
     build-depends:   base
                    , typed-hnix
                    , hspec
+                   , shakespeare
+                   , template-haskell
+                   , text
+
