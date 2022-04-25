@@ -4,6 +4,7 @@
   nixConfig = {
     substituters = [
       https://cache.nixos.org
+      https://iohk.cachix.org
       https://hydra.iohk.io
     ];
     trusted-public-keys = [
@@ -55,6 +56,6 @@
         };
       in flake // {
         # Built by `nix build .`
-        # defaultPackage = flake.packages."typed-hnix:exe:hello";
+        defaultPackage = flake.packages."typed-hnix:exe:hello";
       });
 }
