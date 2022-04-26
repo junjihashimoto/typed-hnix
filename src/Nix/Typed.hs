@@ -7,6 +7,9 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+
 
 module Nix.Typed where
 
@@ -17,6 +20,8 @@ import Data.Fix
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.String
+import Data.Default.Class
+import GHC.Generics
 
 data NixE a = NixE
   { unNixE :: NExpr
@@ -59,6 +64,8 @@ if' (NixE ncond) (NixE na) (NixE nb) = NixE (N.mkIf ncond na nb)
 lambda :: Text -> (NixE a -> NixE b) -> NixE (a -> b)
 lambda symbol func = NixE $ N.mkFunction (N.Param (fromString $ T.unpack symbol)) (unNixE $ func (NixE (N.mkSym symbol)))
 
+lambdaWithSet :: [Text] -> NixE b -> NixE b
+lambdaWithSet symbols func = NixE $ N.mkFunction (N.mkParamSet (map (\v -> (v,Nothing)) symbols)) (unNixE $ func )
 instance NixExpr Int where
   toExpr = NixE . N.mkInt . fromIntegral
 
@@ -142,18 +149,34 @@ instance Num (NixE Float) where
                           zero)
                    ) a
 
+
+class NixSet a where
+  toSet :: a -> [N.Binding NExpr]
+
 data Derivation
 
 data DerivationParam = DerivationParam
-  { pname :: Text
-  , version :: Text
-  , src :: Path
+  { pname :: Maybe Text
+  , version :: Maybe Text
+  , src :: Maybe Path
   , buildInputs :: [NixE Derivation]
   , buildPhase :: Maybe Text
   , installPhase :: Maybe Text
   , builder :: Maybe Text
   , shellHook :: Maybe Text
-  }
+  } deriving (Generic, Default)
+
+instance NixSet DerivationParam where
+  toSet param =
+    (  opt "pname" param.pname
+      ++ opt "version" param.version
+      ++ opt "src" param.src
+      ++ set "buildInputs" param.buildInputs
+      ++ opt "buildPhase" param.buildPhase
+      ++ opt "installPhase" param.installPhase
+      ++ opt "builder" param.builder
+      ++ opt "shellHook" param.shellHook
+    )
 
 set :: NixExpr a => Text -> a -> [N.Binding NExpr]
 set key v = [ key N.$= unNixE (toExpr v) ]
@@ -163,16 +186,10 @@ opt key (Just v) = [ key N.$= unNixE (toExpr v) ]
 opt _ Nothing = []
 
 mkDerivation :: DerivationParam -> NixE Derivation
-mkDerivation param = NixE $ [nix|stdenv.mkDerivation|] N.@@ N.mkNonRecSet
-  (  set "pname" param.pname
-  ++ set "version" param.version
-  ++ set "src" param.src
-  ++ set "buildInputs" param.buildInputs
-  ++ opt "buildPhase" param.buildPhase
-  ++ opt "installPhase" param.installPhase
-  ++ opt "builder" param.builder
-  ++ opt "shellHook" param.shellHook
-  )
+mkDerivation param = NixE $ [nix|stdenv.mkDerivation|] N.@@ N.mkNonRecSet (toSet param)
+
+runCommand :: Text -> DerivationParam -> Text -> NixE Derivation
+runCommand name param code = NixE $ [nix|pkgs.runCommand|] N.@@ unNixE (toExpr name) N.@@ N.mkNonRecSet (toSet param) N.@@ unNixE (toExpr code)
 
 dump :: NixE a -> IO ()
 dump e = print . N.prettyNix . unNixE $ e

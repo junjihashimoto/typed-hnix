@@ -32,9 +32,9 @@ main = hspec $ do
       dumpToText (
         mkDerivation $
           DerivationParam
-          { pname = "hello"
-          , version = "0.1"
-          , src = "./."
+          { pname = Just "hello"
+          , version = Just "0.1"
+          , src = Just "./."
           , buildInputs = []
           , buildPhase = Nothing
           , installPhase = Nothing

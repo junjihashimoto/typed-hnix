@@ -54,8 +54,41 @@
           # This adds support for `nix build .#js-unknown-ghcjs-cabal:hello:exe:hello`
           # crossPlatforms = p: [p.ghcjs];
         };
+        haskellToNix = code :
+          let
+            file = builtins.toFile "haskell-expr" code;
+            drv = pkgs.stdenv.mkDerivation {
+              name = "haskell-expr-as-nix";
+              buildCommand = ''
+                set -x
+                echo hello
+                runghc "${file}"
+                runghc "${file}" > $out
+              '';
+
+              buildInputs = [ (pkgs.typed-hnix-project.ghcWithPackages (p: with p; [typed-hnix data-default-class])) ];
+            };
+          in
+            import "${drv}" ;
+          hello = haskellToNix ''
+{-# LANGUAGE OverloadedStrings #-}
+import Nix.Typed
+import Prelude hiding (pure)
+import Data.Default.Class
+
+main :: IO ()
+main = do
+  dump $
+    lambdaWithSet ["pkgs"] $ runCommand "hello" def "mkdir $out ; echo hello > $out/hello.txt"
+'' {inherit pkgs;};
       in flake // {
         # Built by `nix build .`
         defaultPackage = flake.packages."typed-hnix:exe:hello";
+        packages = {
+          inherit hello;
+        };
+        lib =  {
+          inherit haskellToNix;
+        };
       });
 }

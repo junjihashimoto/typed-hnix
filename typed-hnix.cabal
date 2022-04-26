@@ -11,8 +11,7 @@ version:            0.1.0.0
 -- A URL where users can report bugs.
 -- bug-reports:
 
--- The license under which the package is released.
--- license:
+license:             BSD3
 author:             Junji Hashimoto
 maintainer:         junji.hashimoto@gmail.com
 
@@ -35,6 +34,7 @@ library
                     , text
                     , template-haskell
                     , data-fix
+                    , data-default-class
     hs-source-dirs:   src
     default-language: Haskell2010
 

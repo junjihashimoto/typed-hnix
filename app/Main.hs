@@ -14,11 +14,11 @@ import Prelude hiding (pure)
 main :: IO ()
 main = do
   dump $
-    mkDerivation $
+    lambdaWithSet ["pkgs"] $ mkDerivation $
     DerivationParam
-    { pname = "hello"
-    , version = "0.1"
-    , src = "./."
+    { pname = Just "hello"
+    , version = Just "0.1"
+    , src = Just "./."
     , buildInputs = []
     , buildPhase = Nothing
     , installPhase = Nothing
