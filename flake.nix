@@ -60,9 +60,6 @@
             drv = pkgs.stdenv.mkDerivation {
               name = "haskell-expr-as-nix";
               buildCommand = ''
-                set -x
-                echo hello
-                runghc "${file}"
                 runghc "${file}" > $out
               '';
 
